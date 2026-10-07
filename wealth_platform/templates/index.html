@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WealthFlow — Advanced Wealth & Expense Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          boxShadow: { glow: '0 0 40px rgba(99,102,241,.18)' },
+          animation: { float: 'float 6s ease-in-out infinite' },
+          keyframes: { float: { '0%,100%': { transform:'translateY(0)' }, '50%': { transform:'translateY(-5px)' } } }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { background: radial-gradient(circle at 10% 0%, rgba(79,70,229,.13), transparent 35%), #020617; }
+    .glass { background: rgba(15,23,42,.72); backdrop-filter: blur(18px); border: 1px solid rgba(148,163,184,.12); }
+    .input { width:100%; border-radius:.75rem; background:#0f172a; border:1px solid #334155; padding:.7rem .85rem; outline:none; }
+    .input:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+    .btn { border-radius:.75rem; padding:.65rem 1rem; font-weight:600; transition:.2s; }
+    .btn:hover { transform:translateY(-1px); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100">
+<div id="auth" class="min-h-screen grid place-items-center p-6">
+  <div class="glass shadow-glow rounded-3xl p-8 w-full max-w-md">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="h-11 w-11 rounded-2xl bg-indigo-500/20 grid place-items-center"><i data-lucide="landmark"></i></div>
+      <div><h1 class="text-2xl font-bold">WealthFlow</h1><p class="text-sm text-slate-400">Personal wealth command center</p></div>
+    </div>
+    <div class="flex gap-2 mb-6">
+      <button id="loginTab" class="btn bg-indigo-500 flex-1">Login</button>
+      <button id="signupTab" class="btn bg-slate-800 flex-1">Sign up</button>
+    </div>
+    <form id="authForm" class="space-y-4">
+      <div id="nameWrap" class="hidden"><input id="name" class="input" placeholder="Full name"></div>
+      <input id="email" class="input" type="email" placeholder="Email" required>
+      <input id="password" class="input" type="password" placeholder="Password (8+ characters)" required>
+      <select id="authCurrency" class="input"><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option></select>
+      <button class="btn bg-indigo-600 hover:bg-indigo-500 w-full">Continue</button>
+      <p id="authError" class="text-sm text-rose-400"></p>
+    </form>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+    <div class="max-w-[1600px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-indigo-500/20 grid place-items-center"><i data-lucide="landmark" class="w-5"></i></div>
+        <div><b>WealthFlow</b><span class="hidden md:inline text-slate-500 ml-2">Financial command center</span></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="baseCurrency" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-sm">
+          <option>USD</option><option>EUR</option><option>GBP</option><option>INR</option>
+        </select>
+        <button id="logout" class="btn bg-slate-800"><i data-lucide="log-out" class="w-4 inline"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="glass rounded-2xl p-5"><p class="text-xs uppercase tracking-wider text-slate-500">Total income</p><div id="totalIncome" class="text-2xl font-bold mt-2">—</div></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs uppercase tracking-wider text-slate-500">Total expenses</p><div id="totalExpenses" class="text-2xl font-bold mt-2">—</div></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs uppercase tracking-wider text-slate-500">Projected month-end</p><div id="projected" class="text-2xl font-bold mt-2">—</div></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs uppercase tracking-wider text-slate-500">Budget burn</p><div id="burn" class="text-2xl font-bold mt-2">—</div></div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-5 xl:col-span-2">
+        <div class="flex justify-between items-center"><div><h2 class="font-semibold">Cashflow timeline</h2><p class="text-xs text-slate-500">Income vs expenses</p></div></div>
+        <div id="timelineChart" class="mt-3"></div>
+      </div>
+      <div class="glass rounded-2xl p-5">
+        <h2 class="font-semibold">Current-month categories</h2>
+        <div id="donutChart" class="mt-3"></div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-5 xl:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <div><h2 class="font-semibold">Ledger</h2><p class="text-xs text-slate-500">Search, filter, intersect tags and amounts</p></div>
+          <div class="flex gap-2">
+            <a class="btn bg-slate-800" href="/api/export/csv">CSV</a>
+            <a class="btn bg-slate-800" href="/api/export/xlsx">Excel</a>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+          <input id="search" class="input col-span-2" placeholder="Search merchant, note, category">
+          <select id="kindFilter" class="input"><option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option></select>
+          <input id="minAmount" class="input" type="number" min="0" placeholder="Min">
+          <input id="maxAmount" class="input" type="number" min="0" placeholder="Max">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-slate-500 border-b border-slate-800"><tr><th class="text-left p-3">Date</th><th class="text-left p-3">Merchant</th><th class="text-left p-3">Category</th><th class="text-right p-3">Amount</th><th class="text-right p-3"></th></tr></thead>
+            <tbody id="ledger"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="glass rounded-2xl p-5">
+          <h2 class="font-semibold mb-4">Add transaction</h2>
+          <form id="txForm" class="space-y-3">
+            <div class="grid grid-cols-2 gap-2"><input id="txDate" class="input" type="date" required><select id="txKind" class="input"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+            <div class="grid grid-cols-2 gap-2"><input id="txAmount" class="input" type="number" step="0.01" min="0.01" placeholder="Amount" required><select id="txCurrency" class="input"><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option></select></div>
+            <input id="txCategory" class="input" placeholder="Category" required>
+            <input id="txMerchant" class="input" placeholder="Merchant">
+            <input id="txTags" class="input" placeholder="Tags: home, fixed">
+            <textarea id="txNote" class="input" placeholder="Note"></textarea>
+            <button class="btn bg-indigo-600 w-full">Add transaction</button>
+          </form>
+        </div>
+        <div class="glass rounded-2xl p-5">
+          <h2 class="font-semibold mb-4">Recurring transaction</h2>
+          <form id="recForm" class="space-y-3">
+            <input id="recName" class="input" placeholder="Name e.g. Rent" required>
+            <div class="grid grid-cols-2 gap-2"><input id="recAmount" class="input" type="number" step="0.01" min="0.01" placeholder="Amount" required><select id="recFrequency" class="input"><option>monthly</option><option>weekly</option><option>yearly</option></select></div>
+            <input id="recCategory" class="input" placeholder="Category" required>
+            <input id="recDue" class="input" type="date" required>
+            <button class="btn bg-slate-800 w-full">Schedule recurring</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
